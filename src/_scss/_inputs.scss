@@ -1,8 +1,0 @@
-@use './colour' as *;
-@use './spacing' as *;
-@use './typography' as *;
-
-$input-radius: 4px;
-$input-border-colour: map-get($theme, border);
-$input-padding: 12px map-get($spacing, m);
-$input-label-focused-font-size: map-get($font-size, xs);
