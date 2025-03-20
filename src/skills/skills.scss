@@ -1,0 +1,11 @@
+.images {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  column-gap: 16px;
+}
+
+img {
+  width: 40px;
+  // object-fit: cover;
+}

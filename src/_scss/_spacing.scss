@@ -1,0 +1,94 @@
+$four-k-breakpoint: 2560px;
+$tablet-breakpoint: 800px;
+$desktop-breakpoint: 1200px;
+$xl-desktop-breakpoint: 1900px;
+
+$spacing: (
+  'xxs': 2px,
+  'xs': 4px,
+  's': 12px,
+  'm': 18px,
+  'l': 24px,
+  'xl': 36px,
+  'xxl': 50px,
+);
+
+.xxs-spacer {
+  display: block;
+  height: map-get($spacing, xxs);
+  width: 100%;
+}
+
+.xs-spacer {
+  display: block;
+  height: map-get($spacing, xs);
+  width: 100%;
+}
+
+.small-spacer {
+  display: block;
+  height: map-get($spacing, s);
+  width: 100%;
+}
+
+.medium-spacer {
+  display: block;
+  height: map-get($spacing, m);
+  width: 100%;
+}
+
+.large-spacer {
+  display: block;
+  height: map-get($spacing, l);
+  width: 100%;
+}
+
+@mixin margin-top-attribute-selectors() {
+  &[margin-top-small] {
+    margin-top: map-get($spacing, s);
+  }
+
+  &[margin-top-medium] {
+    margin-top: map-get($spacing, m);
+  }
+
+  &[margin-top-large] {
+    margin-top: map-get($spacing, l);
+  }
+}
+
+@mixin margin-left-attribute-selectors() {
+  &[margin-left-small] {
+    margin-left: map-get($spacing, s);
+  }
+
+  &[margin-left-medium] {
+    margin-left: map-get($spacing, m);
+  }
+
+  &[margin-left-large] {
+    margin-left: map-get($spacing, l);
+  }
+}
+
+@mixin margin-bottom-attribute-selectors() {
+  &[margin-bottom-xs] {
+    margin-bottom: map-get($spacing, xs);
+  }
+
+  &[margin-bottom-small] {
+    margin-bottom: map-get($spacing, s);
+  }
+
+  &[margin-bottom-medium] {
+    margin-bottom: map-get($spacing, m);
+  }
+
+  &[margin-bottom-large] {
+    margin-bottom: map-get($spacing, l);
+  }
+
+  &[margin-bottom-xl] {
+    margin-bottom: map-get($spacing, xl);
+  }
+}

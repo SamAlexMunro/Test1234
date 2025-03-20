@@ -1,0 +1,77 @@
+{
+    "todohighlight.keywordsPattern": "TODO",
+    "todohighlight.defaultStyle": {
+      "color": "black",
+      "backgroundColor": "#ffab00",
+      "overviewRulerColor": "#ffab00",
+      "cursor": "pointer",
+      "isWholeLine": false,
+      "border": "1px solid #eee",
+      "borderRadius": "2px"
+    },
+    "todohighlight.include": [
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.html",
+      "**/*.php",
+      "**/*.css",
+      "**/*.scss"
+    ],
+    "todohighlight.exclude": [
+      "**/node_modules/**",
+      "**/bower_components/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.vscode/**",
+      "**/.github/**",
+      "**/_output/**",
+      "**/*.min.*",
+      "**/*.map",
+      "**/.next/**"
+    ],
+    "todohighlight.maxFilesForSearch": 5120,
+    "todohighlight.toggleURI": false,
+    "[typescript]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescriptreact]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[scss]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "sibiraj-s.vscode-scss-formatter"
+    },
+    "[css]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "sibiraj-s.vscode-scss-formatter"
+    },
+    "[html]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "gformat.html-formatter"
+    },
+    "[json]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "eslint.validate": ["typescript"],
+    "stylelint.validate": ["scss"],
+    "prettier.singleQuote": true,
+    "scssFormatter.singleQuote": true,
+    "files.trimTrailingWhitespace": true,
+    "editor.tabSize": 2,
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "files.exclude": {
+      "**/.git": false
+    }
+  }
