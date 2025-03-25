@@ -1,4 +1,5 @@
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber';
+import _ from 'lodash';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import './skills.scss';
@@ -118,56 +119,67 @@ function ImageWithEffect({
     }
   }, [texture]);
 
-  // Set up scroll listener
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const delta = currentScrollY - lastScrollY.current;
-      lastScrollY.current = currentScrollY;
+      // Request animation frame to prevent event flooding during inertial scrolling
+      requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        const delta = currentScrollY - lastScrollY.current;
+        lastScrollY.current = currentScrollY;
 
-      // Skip tiny movements to avoid jitter
-      if (Math.abs(delta) < 0.5) return;
+        // Use a lower threshold for mobile - mobile can have smaller deltas
+        if (Math.abs(delta) < 0.1) return;
 
-      // Calculate normalized direction
-      const direction = Math.sign(delta);
-      targetDirection.current.set(0, direction);
+        // Calculate normalized direction - use the actual delta value rather than just sign
+        // This gives smoother transitions when direction changes
+        const normalizedDelta = Math.min(
+          1.0,
+          Math.abs(delta) / (isMobile() ? 15 : 30)
+        );
+        targetDirection.current.set(0, normalizedDelta * Math.sign(delta));
 
-      // Calculate scroll speed - simpler calculation
-      const speedFactor = Math.min(1.0, Math.abs(delta) / 20);
-      targetAberrationStrength.current = speedFactor * maxAberration;
+        // Calculate speed factor with smoother scaling - prevent sudden jumps
+        const speedFactor = Math.min(
+          1.0,
+          Math.abs(delta) / (isMobile() ? 12 : 25)
+        );
+        targetAberrationStrength.current = speedFactor * maxAberration;
 
-      // Set scrolling state
-      isScrolling.current = true;
-      forceReset.current = false;
+        // Set scrolling state
+        isScrolling.current = true;
 
-      // Clear any existing timeout
-      if (scrollTimer.current !== null) {
-        window.clearTimeout(scrollTimer.current);
-      }
+        // Important: Don't force reset while actively scrolling
+        forceReset.current = false;
 
-      // Set new timeout to reset scrolling state
-      scrollTimer.current = window.setTimeout(() => {
-        isScrolling.current = false;
-        // Don't immediately reset values, just set the target to 0
-        targetAberrationStrength.current = 0;
+        // Clear any existing timeout
+        if (scrollTimer.current !== null) {
+          window.clearTimeout(scrollTimer.current);
+        }
 
-        // Set another timeout to force reset if animation gets stuck
-        window.setTimeout(() => {
-          // Only force reset if current strength is very small but not 0
-          if (
-            currentAberrationStrength.current > 0 &&
-            currentAberrationStrength.current < 0.05
-          ) {
-            forceReset.current = true;
-          }
-        }, 1000); // Check after 1 second
-      }, 200);
+        // More consistent timeout between mobile and desktop
+        scrollTimer.current = window.setTimeout(
+          () => {
+            isScrolling.current = false;
+            targetAberrationStrength.current = 0;
+
+            // Don't use a second timeout - simplify the reset logic
+            // A slow decay is better than a sudden jump
+            // The useFrame function will handle the transition smoothly
+          },
+          isMobile() ? 250 : 200
+        );
+      });
     };
 
+    // Use passive touch events which are better for mobile
     window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Add touch events to handle mobile scroll more precisely
+    window.addEventListener('touchmove', handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('touchmove', handleScroll);
       if (scrollTimer.current !== null) {
         window.clearTimeout(scrollTimer.current);
       }
@@ -175,34 +187,57 @@ function ImageWithEffect({
   }, [maxAberration]);
 
   // Animation loop with smooth transitions in both directions
+  // Modified useFrame function to fix mobile snapping issue
   useFrame((_, delta) => {
     if (!materialRef.current) return;
 
-    // Determine appropriate damping factor
-    // Use stronger damping when returning to rest state for faster decay
-    const strengthDamping = isScrolling.current ? 0.15 : 0.08;
+    // Adaptive damping based on device type
+    const isMobileDevice = isMobile();
 
-    // Force reset check
+    // Use consistent damping values - this prevents the sudden changes in interpolation speed
+    const strengthDamping = isMobileDevice ? 0.12 : 0.15;
+
+    // Force reset check - but make it smoother
     if (forceReset.current) {
-      currentAberrationStrength.current = 0;
-      currentDirection.current.set(0, 0);
-      forceReset.current = false;
+      // Instead of instantly setting to zero, use a stronger damping
+      const resetDamping = isMobileDevice ? 0.4 : 0.25;
+      currentAberrationStrength.current = THREE.MathUtils.lerp(
+        currentAberrationStrength.current,
+        0,
+        resetDamping
+      );
+      currentDirection.current.lerp(new THREE.Vector2(0, 0), resetDamping);
+
+      // Only truly reset once we're very close to zero
+      if (currentAberrationStrength.current < 0.0005) {
+        currentAberrationStrength.current = 0;
+        currentDirection.current.set(0, 0);
+        forceReset.current = false;
+      }
     } else {
+      // Use consistent time-scaled damping for all cases
+      const scaledDamping = 1.0 - Math.pow(1.0 - strengthDamping, delta * 60);
+
       // Smoothly interpolate aberration strength
       currentAberrationStrength.current = THREE.MathUtils.lerp(
         currentAberrationStrength.current,
         targetAberrationStrength.current,
-        strengthDamping
+        scaledDamping
       );
 
-      // Round to zero if very close to avoid floating point issues
-      if (currentAberrationStrength.current < 0.001) {
+      // Only round to zero when very close
+      if (currentAberrationStrength.current < 0.0005) {
         currentAberrationStrength.current = 0;
       }
 
-      // Smoothly interpolate direction vector
-      const directionDamping = 0.2;
-      currentDirection.current.lerp(targetDirection.current, directionDamping);
+      // Use consistent direction damping to prevent the shift
+      const directionDamping = isMobileDevice ? 0.12 : 0.15;
+      const scaledDirectionDamping =
+        1.0 - Math.pow(1.0 - directionDamping, delta * 60);
+      currentDirection.current.lerp(
+        targetDirection.current,
+        scaledDirectionDamping
+      );
     }
 
     // Update shader uniforms
@@ -211,26 +246,31 @@ function ImageWithEffect({
     materialRef.current.uniforms.aberrationDirection.value =
       currentDirection.current;
 
-    // Calculate offset based on current values
+    // Calculate offset with a more stable approach
     const offset =
-      currentAberrationStrength.current *
-      0.5 *
-      (currentDirection.current.y === 0
-        ? 0
-        : Math.sign(currentDirection.current.y));
+      currentAberrationStrength.current * 0.5 * currentDirection.current.y; // Use the full value instead of just the sign
 
     materialRef.current.uniforms.uOffset.value.set(0, offset);
   });
 
+  // 3. Add a device detection function
+  function isMobile() {
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      ) || window.innerWidth <= 768
+    );
+  }
+
   return materialRef.current ? (
     <mesh ref={meshRef} position={position}>
-      <planeGeometry args={[size.width, size.height, 8, 8]} />
+      <planeGeometry args={[size.width, size.height, 6, 1]} />
       <primitive object={materialRef.current} attach="material" />
     </mesh>
   ) : null;
 }
 
-// Component to handle the image mapping and canvas setup
+// Updated ShaderEffectOverlay component with better resize handling
 function ShaderEffectOverlay() {
   const [imageData, setImageData] = useState<ImageData[]>([]);
   const { viewport } = useThree();
@@ -240,9 +280,10 @@ function ShaderEffectOverlay() {
 
   // Re-measure image positions when window is resized
   useEffect(() => {
-    const handleResize = () => {
+    // Debounce resize function to avoid too many calculations
+    const handleResize = _.debounce(() => {
       setupImages();
-    };
+    }, 200);
 
     // Initial setup
     setupImages();
@@ -253,7 +294,7 @@ function ShaderEffectOverlay() {
     };
   }, []);
 
-  // Function to collect image data from DOM
+  // Function to collect image data from DOM with improved size calculations
   const setupImages = () => {
     const images = document.querySelectorAll('img[data-shader]');
     const newImageData: ImageData[] = [];
@@ -263,15 +304,11 @@ function ShaderEffectOverlay() {
       const viewportWidth = viewport.width;
       const viewportHeight = viewport.height;
 
-      // Calculate normalized coordinates and size
-      // Convert from pixel coordinates to Three.js world coordinates
-      // @ts-ignore
-      const worldWidth = (img.width / window.innerWidth) * viewportWidth;
-      // @ts-ignore
-      const worldHeight = (img.height / window.innerHeight) * viewportHeight;
+      // Calculate size based on the current bounding rect instead of the original img dimensions
+      const worldWidth = (rect.width / window.innerWidth) * viewportWidth;
+      const worldHeight = (rect.height / window.innerHeight) * viewportHeight;
 
       // Calculate center position (Three.js uses center coordinates)
-      // Also needs to convert from DOM coordinates (top-left origin) to Three.js coordinates (center origin)
       const worldX =
         ((rect.left + rect.width / 2) / window.innerWidth) * viewportWidth -
         viewportWidth / 2;
@@ -283,8 +320,7 @@ function ShaderEffectOverlay() {
         viewportHeight / 2;
 
       newImageData.push({
-        // @ts-ignore
-        src: img.src,
+        src: (img as HTMLImageElement).src,
         position: [worldX, worldY, 0],
         size: {
           width: worldWidth,
@@ -293,15 +329,14 @@ function ShaderEffectOverlay() {
       });
 
       // Hide original image
-      // @ts-ignore
-      img.style.opacity = '0';
+      (img as HTMLImageElement).style.opacity = '0';
     });
 
     setImageData(newImageData);
     setupComplete.current = true;
   };
 
-  // Updates positions when scrolling
+  // Updates positions AND sizes when scrolling or when sizes change
   useFrame(() => {
     if (setupComplete.current) {
       const images = document.querySelectorAll('img[data-shader]');
@@ -315,6 +350,7 @@ function ShaderEffectOverlay() {
         const viewportWidth = viewport.width;
         const viewportHeight = viewport.height;
 
+        // Update position coordinates
         const worldX =
           ((rect.left + rect.width / 2) / window.innerWidth) * viewportWidth -
           viewportWidth / 2;
@@ -325,13 +361,24 @@ function ShaderEffectOverlay() {
           ) +
           viewportHeight / 2;
 
+        // Update size coordinates - crucial for responsive resizing
+        const worldWidth = (rect.width / window.innerWidth) * viewportWidth;
+        const worldHeight = (rect.height / window.innerHeight) * viewportHeight;
+
+        // Check if position OR size has changed significantly
         if (
           Math.abs(updatedImageData[index].position[0] - worldX) > 0.01 ||
-          Math.abs(updatedImageData[index].position[1] - worldY) > 0.01
+          Math.abs(updatedImageData[index].position[1] - worldY) > 0.01 ||
+          Math.abs(updatedImageData[index].size.width - worldWidth) > 0.01 ||
+          Math.abs(updatedImageData[index].size.height - worldHeight) > 0.01
         ) {
           updatedImageData[index] = {
             ...updatedImageData[index],
             position: [worldX, worldY, 0],
+            size: {
+              width: worldWidth,
+              height: worldHeight,
+            },
           };
           needsUpdate = true;
         }
@@ -384,32 +431,80 @@ export const Skills = () => {
   const images = [''];
   return (
     <>
-      <p className="intro">
-        I have 8 years of experience building interactive web apps, from SaaS
-        products to content-managed marketing websites in the US, Australia, and
-        New Zealand.
-      </p>
+      <span className="clip">
+        <p className="skills-intro">
+          I have 8 years of experience building interactive web apps, building
+          anything from SaaS products, component libraries, marketing campaigns
+          and anything else in-between!
+        </p>
+      </span>
+
       {/* ShaderImageEffect creates an overlay canvas that applies effects to all images with data-shader */}
       <ShaderImageEffect />
       <div className="images">
-        <img alt="test" src="js.png" data-shader />
-        <img alt="test" src="ts.png" data-shader />
-        <img alt="test" src="react.png" data-shader />
-        <img alt="test" src="react-native.svg" data-shader />
-        <img alt="test" src="angular.png" data-shader />
-        <img alt="test" src="three.png" data-shader />
-        <img alt="test" src="gsap.png" data-shader />
-        <img alt="test" src="scss.png" data-shader />
-        <img alt="test" src="css.png" data-shader />
-        <img alt="test" src="git.png" data-shader />
-        <img alt="test" src="google-cloud.svg" data-shader />
-        <img alt="test" src="graphql.png" data-shader />
+        <div className="img-container">
+          <img alt="javscript" src="js.png" data-shader />
+        </div>
+        <div className="img-container">
+          <img alt="typescript" src="ts.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img
+            alt="react"
+            src="react.png"
+            data-shader
+            style={{ paddingTop: '89.06%', marginTop: 0 }}
+          />
+        </div>
+
+        <div className="img-container">
+          <img alt="react native" src="react-native.svg" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="angular" src="angular.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="three JS" src="three.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="GSAP" src="gsap.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="Sass" src="scss.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="CSS" src="css.svg.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="Git" src="git.svg.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="Google Cloud" src="google-cloud.svg" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="Graph QL" src="graphql.png" data-shader />
+        </div>
+        <div className="img-container">
+          <img alt="Jasmine" src=" jasmine.svg.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img className="figma" alt="Jasmine" src="figma.png" data-shader />
+        </div>
+
+        <div className="img-container">
+          <img alt="Jasmine" src="rxjs.png" data-shader />
+        </div>
       </div>
-      <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br />{' '}
-      <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br />{' '}
-      <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br />{' '}
-      <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br />{' '}
-      <br />
     </>
   );
 };

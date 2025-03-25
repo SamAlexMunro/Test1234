@@ -1,0 +1,21 @@
+@use '../_scss/base' as *;
+
+.section {
+  margin-top: map-get($spacing, xxl);
+}
+
+.project-splash {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.project-intro {
+  font-size: 1.8rem;
+  margin-bottom: map-get($spacing, l);
+}
+
+.project-name {
+  font-size: 1.5rem;
+  margin-bottom: map-get($spacing, s);
+}

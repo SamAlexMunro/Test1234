@@ -1,6 +1,8 @@
+import gsap from 'gsap';
 import { useEffect, useRef } from 'react';
 import { annotate } from 'rough-notation';
 import './App.scss';
+import { Showcase } from './showcase/showcase';
 import { Skills } from './skills/skills';
 
 function App() {
@@ -8,15 +10,63 @@ function App() {
   const usersText = useRef(null);
   const businessValueText = useRef(null);
   const codeQualityText = useRef(null);
+  const transition = useRef(null);
+  const charsRef = useRef([]);
+  const textRef = useRef(null);
+
+  const engagingCopy = 'engaging';
+  // Reset refs array when text changes
+  charsRef.current = [];
+
+  // Add to ref array for each character
+  const addToRefs = (el: any) => {
+    // @ts-ignore
+    if (el && !charsRef.current.includes(el)) {
+      // @ts-ignore
+      charsRef.current.push(el);
+    }
+  };
 
   useEffect(() => {
     setTimeout(() => {
-      setupCircleWordEffect(engagingText, 0, 0);
-      setupUnderlineWordEffect(usersText, 500, 2);
+      setupHighlightWordEffect(engagingText, 1, 0);
+      setupUnderlineWordEffect(usersText, 500, 1);
       setupUnderlineWordEffect(businessValueText, 900, 1);
-      setupUnderlineWordEffect(codeQualityText, 1300, 2);
+      setupUnderlineWordEffect(codeQualityText, 1300, 1);
     }, 1750);
+
+    setTimeout(() => {
+      animateText();
+    }, 2020);
   }, []);
+
+  useEffect(() => {
+    // Set initial color for all characters
+    gsap.set(charsRef.current, { color: '#fffce1' });
+
+    // Create a timeline for reuse
+    const tl = gsap.timeline({ paused: true });
+
+    // Add animation to the timeline
+    tl.to(charsRef.current, {
+      duration: 0.5,
+      color: 'black',
+      stagger: 0.046,
+      ease: 'power2.inOut',
+    });
+
+    // Store the timeline in ref
+    // @ts-ignore
+    textRef.current = tl;
+  }, []);
+
+  const animateText = () => {
+    // Reset to initial state before playing
+    // @ts-ignore
+    textRef.current.progress(0);
+    // @ts-ignore
+    textRef.current.play();
+  };
 
   const setupHighlightWordEffect = (
     element?: any,
@@ -30,7 +80,7 @@ function App() {
       multiline: true,
       color: '#F49939', // Color of the circle
       iterations,
-      padding: 0,
+      padding: 4,
     });
 
     // Display the annotation
@@ -50,9 +100,9 @@ function App() {
     const annotation = annotate(element.current, {
       type: 'box', // Annotation type
       color: '#F49939', // Color of the circle
-      strokeWidth: 3, // Thickness of the circle's stroke
+      strokeWidth: 2, // Thickness of the circle's stroke
       padding: 2, // Padding around the element
-      iterations: 2,
+      iterations: 1,
       animationDuration: 1000,
       multiline: true,
     });
@@ -74,7 +124,7 @@ function App() {
       type: 'underline', // Annotation type
       color: '#F49939', // Color of the circle
       strokeWidth: 2, // Thickness of the circle's stroke
-      padding: 2, // Padding around the element
+      padding: 1, // Padding around the element
       iterations,
       multiline: true,
     });
@@ -84,8 +134,10 @@ function App() {
       annotation.show();
     }, delay);
   };
+
   return (
     <>
+      {/* <Squiggle></Squiggle> */}
       <section className="landing">
         <p className="intro">
           <span className="clip">
@@ -108,7 +160,17 @@ function App() {
             <span className="about">
               I love crafting&nbsp;
               <span ref={engagingText} className="engaging">
-                engaging
+                <span ref={transition}>
+                  {engagingCopy.split('').map((char, index) => (
+                    <span
+                      key={index}
+                      ref={addToRefs}
+                      className="text-color-wipe-char"
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </span>
               </span>{' '}
               experiences with the
               <span ref={usersText}> users</span>,&nbsp;
@@ -119,9 +181,11 @@ function App() {
         </p>
 
         <div className="email">
-          <a className="contact" href="mailto:samalexmunro94@gmail.com">
-            Say hello&#64;sammunro.com
-          </a>
+          <span className="clip">
+            <a className="contact" href="mailto:samalexmunro94@gmail.com">
+              Say hello&#64;sammunro.com
+            </a>
+          </span>
 
           <button className="anchor-button">
             <span className="material-symbols-outlined">arrow_downward</span>
@@ -132,6 +196,8 @@ function App() {
       <div className="loading-background"></div>
 
       <Skills />
+
+      <Showcase />
     </>
   );
 }

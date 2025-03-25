@@ -19,6 +19,7 @@
 
 body {
   width: 100vw;
+  overflow-x: hidden;
   color: #fffce1;
   padding: map-get($spacing, m);
   background: url('../public/noise-light.png'), linear-gradient(to bottom, #0e100f, #0e100f);
