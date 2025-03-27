@@ -2,6 +2,8 @@ import gsap from 'gsap';
 import { useEffect, useRef } from 'react';
 import { annotate } from 'rough-notation';
 import './App.scss';
+
+import { ChromaticAberration } from './chromatic-abberation/chromatic-abberation';
 import { Showcase } from './showcase/showcase';
 import { Skills } from './skills/skills';
 
@@ -194,6 +196,8 @@ function App() {
       </section>
 
       <div className="loading-background"></div>
+
+      <ChromaticAberration imageSrc="projects/hotel-insights.png" />
 
       <Skills />
 

@@ -433,8 +433,8 @@ export const Skills = () => {
     <>
       <span className="clip">
         <p className="skills-intro">
-          I have 8 years of experience building interactive web apps, building
-          anything from SaaS products, component libraries, marketing campaigns
+          I have 8 years of experience building interactive applications,
+          ranging from SaaS products, component libraries, marketing campaigns
           and anything else in-between!
         </p>
       </span>
